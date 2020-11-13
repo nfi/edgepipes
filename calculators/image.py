@@ -23,6 +23,7 @@ import cv2
 import mss
 import numpy as np
 import time
+import dashboard
 from datetime import datetime
 from calculators.core import Calculator, SwitchNode, TextData
 from yolo3.yolo3 import YoloV3
@@ -80,10 +81,14 @@ class ImageMovementDetector(Calculator):
 
 
 class ShowImage(Calculator):
+
+    def __init__(self, name, s, options=None):
+        super().__init__(name, s, options)
+
     def process(self):
         image = self.get(0)
         if isinstance(image, ImageData):
-            cv2.imshow(self.name, image.image)
+            dashboard.imshow(self.name, image.image)
         return True
 
 
@@ -129,9 +134,9 @@ class ShowStatusImageFromFiles(Calculator):
         self._current_status = status
         if status:
             self._last_on_time = time.time()
-            cv2.imshow(self._window_title, self.onImage)
+            dashboard.imshow(self._window_title, self.onImage)
         else:
-            cv2.imshow(self._window_title, self.offImage)
+            dashboard.imshow(self._window_title, self.offImage)
 
     def process(self):
         data = self.get(0)

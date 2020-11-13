@@ -8,6 +8,9 @@
 # But can also be via a "bus" or other communication mechanism
 # 
 
+import dashboard
+
+
 class TextData:
     def __init__(self, text, timestamp):
         self.text = text
@@ -103,6 +106,7 @@ class SwitchNode(Calculator):
             print("Error: to large state specified:", state)
         else:
             self._switch_state = state
+            dashboard.set_active_win(state)
 
     def toggle_state(self):
         self.set_switch_state(0 if self._switch_state > 0 else 1)
