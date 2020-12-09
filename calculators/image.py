@@ -20,6 +20,7 @@
 #
 import cvutils
 import cv2
+import imutils
 import mss
 import numpy as np
 import time
@@ -339,4 +340,19 @@ class SobelEdgesCalculator(Calculator):
                 img = cv2.GaussianBlur(image.image, (3, 3), 0)
                 sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=5)
                 self.set_output(0, ImageData(sobelx, image.timestamp))
+            return True
+
+
+class CannyEdgesCalculator(Calculator):
+    def __init__(self, name, s, options=None):
+        super().__init__(name, s, options)
+        self.input_data = [None]
+
+    def process(self):
+        if self.input_data[0] is not None:
+            image = self.get(0)
+            if isinstance(image, ImageData):
+                gray = cv2.cvtColor(image.image, cv2.COLOR_BGR2GRAY)
+                edges = imutils.auto_canny(gray)
+                self.set_output(0, ImageData(edges, image.timestamp))
             return True

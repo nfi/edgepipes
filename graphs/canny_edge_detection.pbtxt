@@ -1,0 +1,12 @@
+# MediaPipe graph that performs Canny edge detection on a live video stream.
+
+# Images coming into and out of the graph.
+input_stream: "input_video"
+output_stream: "output_video"
+
+# Applies the Sobel filter to luminance images sotred in RGB format.
+node: {
+  calculator: "CannyEdgesCalculator"
+  input_stream: "input_video"
+  output_stream: "output_video"
+}
