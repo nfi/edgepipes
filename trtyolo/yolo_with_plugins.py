@@ -19,9 +19,7 @@ try:
     ctypes.cdll.LoadLibrary('./trtyolo/libyolo_layer.so')
     print("- done.")
 except OSError as e:
-    raise SystemExit('ERROR: failed to load ./plugins/libyolo_layer.so.  '
-                     'Did you forget to do a "make" in the "./plugins/" '
-                     'subdirectory?') from e
+    raise SystemExit('ERROR: failed to load ./trtyolo/libyolo_layer.so.') from e
 
 
 def _preprocess_yolo(img, input_shape):

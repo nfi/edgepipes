@@ -15,6 +15,7 @@
 # They can come in one single combined data-packet och as a picture that should be "annotated"
 # with labels
 #
+
 import cv2
 import sys
 import time
@@ -28,6 +29,7 @@ import pipeconfig_pb2
 import sched
 import importlib
 import argparse
+import logging
 
 
 def _resolve_class(class_name):
@@ -68,6 +70,7 @@ class PipelineError(Exception):
 class Pipeline:
 
     def __init__(self):
+        self.log = logging.getLogger('Pipeline')
         self.scheduler = sched.scheduler(time.time, time.sleep)
         self.streaming_data = {}
         self.pipeline = []
@@ -78,7 +81,7 @@ class Pipeline:
         self.count = {}
 
     def add_node(self, calculator, prefix, options, input_streams, output_streams):
-        print("calculator", calculator)
+        self.log.debug("adding calculator %s%s", prefix, calculator)
         node_class = _resolve_class(calculator)
         n = node_class("Node:" + prefix + ":" + calculator, self.streaming_data, options=options)
         n.set_input_names(input_streams)
@@ -182,16 +185,13 @@ class Pipeline:
         self.do_exit = True
 
 
-# Either load a pbtxt file or use the default above
-if __name__ == "__main__":
-
-    pipeline = Pipeline()
-
+def main():
     try:
         args = sys.argv[1:]
         p = argparse.ArgumentParser()
         p.add_argument('--input', dest='input_video', default=None, help='video stream input')
         p.add_argument('--input_audio', dest='input_audio', default=None, help='audio stream input')
+        p.add_argument('--loglevel', dest='log_level', default=None, help='log level')
         p.add_argument('-n', '--dry-run', dest='dry_run', action='store_true', default=False,
                        help='test pipeline setup and exit')
         p.add_argument('pipeline', nargs=1)
@@ -199,7 +199,18 @@ if __name__ == "__main__":
     except Exception as e:
         sys.exit(f"Illegal arguments: {e}")
 
-    print(f"Loading pipeline from {conopts.pipeline[0]}")
+    log_level = logging.INFO
+    if conopts.log_level:
+        if conopts.log_level.isdigit():
+            log_level = int(conopts.log_level)
+        else:
+            log_level = conopts.log_level.upper()
+
+    logging.basicConfig(format='%(asctime)s [%(name)s] %(levelname)s - %(message)s', level=log_level)
+
+    pipeline = Pipeline()
+
+    pipeline.log.info(f"Loading pipeline from {conopts.pipeline[0]}")
     try:
         with open(conopts.pipeline[0], "r") as f:
             txt = f.read()
@@ -218,3 +229,7 @@ if __name__ == "__main__":
     if not conopts.dry_run:
         pipeline.start()
         pipeline.run()
+
+
+if __name__ == "__main__":
+    main()

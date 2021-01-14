@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 #
 import argparse
+import logging
 import os
 import sys
 import threading
@@ -19,12 +20,12 @@ class PipeCli(Cmd):
     prompt = 'pipecli> '
 
     def __init__(self, completekey='tab', stdin=None, stdout=None):
-        Cmd.__init__(self, completekey=completekey, stdin=stdin, stdout=stdout)
+        super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
         self.pipeline = edgepipes.Pipeline()
         self.ctr = 1
         self.options = {}
 
-    def do_exit(self, inp):
+    def do_exit(self, _inp):
         """exit the application."""
         print("Bye")
         self.pipeline.exit()
@@ -42,8 +43,12 @@ class PipeCli(Cmd):
         self.options['input_audio'] = {'audio': inp}
 
     def do_list(self, inp):
-        """list the available audio or video input devices"""
-        if inp == 'audio':
+        """list the available audio or video input devices. (list [video|audio|pipelines])"""
+        if inp == '' or inp == 'pipeline' or inp == 'pipelines':
+            print("Available pipelines (in graphs):")
+            for file in [f for f in os.listdir("graphs")]:
+                print(' ', file)
+        elif inp == 'audio':
             paud = get_pyaudio()
             info = paud.get_host_api_info_by_index(0)
             device_count = info.get('deviceCount')
@@ -78,9 +83,10 @@ class PipeCli(Cmd):
                     else:
                         print(f"  Port {port[0]} ({port[2]} x {port[3]}) - failed to read")
         else:
-            print("Unknown option to list")
+            print("Unknown option to list. Please specify 'video', 'audio' or 'pipelines'.")
 
-    def do_togglestate(self, inp):
+    def do_togglestate(self, _inp):
+        """toggle state of all SwitchNodes in pipeline."""
         nodes = self.pipeline.get_nodes_by_type(SwitchNode)
         if nodes:
             for n in nodes:
@@ -89,10 +95,11 @@ class PipeCli(Cmd):
         else:
             print("Found no switch nodes to toggle")
 
-    def do_print(self, inp):
+    def do_print(self, _inp):
+        """print pipeline statistics"""
         for n in self.pipeline.pipeline:
             print("N:", n.name)
-            print("  Time consumed:", self.pipeline.elapsed[n.name], self.pipeline.elapsed[n.name] / self.pipeline.count[n.name] )
+            print("  Time consumed:", self.pipeline.elapsed[n.name], self.pipeline.elapsed[n.name] / self.pipeline.count[n.name])
             print("  input :", n.input)
             print("  output:", n.output)
         print("Done...")
@@ -105,6 +112,7 @@ class PipeCli(Cmd):
         return
 
     def do_load(self, inp):
+        """load a graph (load <graph>)"""
         if len(inp) == 0:
             files = [f for f in os.listdir("graphs")]
             print("Available pipelines (in graphs):")
@@ -136,16 +144,37 @@ class PipeCli(Cmd):
     def do_step(self, inp):
         self.pipeline.step()
 
-if __name__ == "__main__":
+    def emptyline(self):
+        return
+
+    def default(self, line):
+        if line == 'EOF':
+            return self.do_exit(line)
+        return super().default(line)
+
+
+def main():
     try:
         args = sys.argv[1:]
         p = argparse.ArgumentParser()
         p.add_argument('--input', dest='input_video', default=None, help='video stream input')
         p.add_argument('--input_audio', dest='input_audio', default=None, help='audio stream input')
+        p.add_argument('--loglevel', dest='log_level', default=None, help='log level')
+        p.add_argument('-n', '--dry-run', dest='dry_run', action='store_true', default=False,
+                       help='test pipeline setup and exit')
         p.add_argument('pipeline', nargs='?')
         conopts = p.parse_args(args)
     except Exception as e:
         sys.exit(f"Illegal arguments: {e}")
+
+    log_level = logging.INFO
+    if conopts.log_level:
+        if conopts.log_level.isdigit():
+            log_level = int(conopts.log_level)
+        else:
+            log_level = conopts.log_level.upper()
+
+    logging.basicConfig(format='%(asctime)s [%(name)s] %(levelname)s - %(message)s', level=log_level)
 
     pipeline_graph = None
     if conopts.pipeline:
@@ -175,3 +204,7 @@ if __name__ == "__main__":
     thread.start()
     p.pipeline.run()
     thread.join()
+
+
+if __name__ == "__main__":
+    main()
